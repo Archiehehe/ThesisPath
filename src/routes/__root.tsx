@@ -77,14 +77,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ThesisPath — Structured equity research" },
+      { title: "ThesisPath — Structured equity research workflow" },
       {
         name: "description",
         content:
           "A curated stock universe with subtheme-specific research question packs and bounded AI assistance per question.",
       },
       { name: "author", content: "ThesisPath" },
-      { property: "og:title", content: "ThesisPath — Structured equity research" },
+      { property: "og:title", content: "ThesisPath — Structured equity research workflow" },
       {
         property: "og:description",
         content:
@@ -92,6 +92,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "ThesisPath — Structured equity research workflow" },
+      { name: "description", content: "Pick a ticker, work through a subtheme-specific research question pack, and get bounded AI assistance grounded in a curated stock universe." },
+      { property: "og:description", content: "Pick a ticker, work through a subtheme-specific research question pack, and get bounded AI assistance grounded in a curated stock universe." },
+      { name: "twitter:description", content: "Pick a ticker, work through a subtheme-specific research question pack, and get bounded AI assistance grounded in a curated stock universe." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e271bdf2-d386-4e90-b234-92184a6a6d15/id-preview-d286e827--36126721-9f9d-4b34-ae4b-767defae4892.lovable.app-1783302570925.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/e271bdf2-d386-4e90-b234-92184a6a6d15/id-preview-d286e827--36126721-9f9d-4b34-ae4b-767defae4892.lovable.app-1783302570925.png" },
     ],
     links: [
       {
