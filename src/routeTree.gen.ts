@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TickerRouteImport } from './routes/$ticker'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAssistRouteImport } from './routes/api/assist'
 
+const TickerRoute = TickerRouteImport.update({
+  id: '/$ticker',
+  path: '/$ticker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const ApiAssistRoute = ApiAssistRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/assist'
+  fullPaths: '/' | '/$ticker' | '/api/assist'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/assist'
-  id: '__root__' | '/' | '/api/assist'
+  to: '/' | '/$ticker' | '/api/assist'
+  id: '__root__' | '/' | '/$ticker' | '/api/assist'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TickerRoute: typeof TickerRoute
   ApiAssistRoute: typeof ApiAssistRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/$ticker': {
+      id: '/$ticker'
+      path: '/$ticker'
+      fullPath: '/$ticker'
+      preLoaderRoute: typeof TickerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TickerRoute: TickerRoute,
   ApiAssistRoute: ApiAssistRoute,
 }
 export const routeTree = rootRouteImport
