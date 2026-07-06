@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 type Body = {
@@ -8,41 +8,47 @@ type Body = {
   prompt: Record<string, unknown> | null;
   userAnswer?: string;
   action?: string;
-  messages: UIMessage[];
+  userMessage?: string;
 };
 
 function buildSystemPrompt(b: Body): string {
-  const p = b.prompt ?? {};
-  const c = b.company;
-  const q = b.question;
+  const p = (b.prompt ?? {}) as Record<string, unknown>;
   return [
-    (p as any).role ?? "You are an equity research workflow assistant.",
+    (p.role as string) ?? "You are an equity research workflow assistant.",
     "",
-    `Task: ${(p as any).task ?? "Help the user answer this ThesisPath question."}`,
+    `Task: ${(p.task as string) ?? "Help the user answer this ThesisPath question."}`,
     "",
     "== Company universe record (authoritative — do not reclassify) ==",
-    JSON.stringify(c, null, 2),
+    JSON.stringify(b.company, null, 2),
     "",
     "== Question ==",
-    JSON.stringify(q, null, 2),
+    JSON.stringify(b.question, null, 2),
     "",
     "== Analysis focus ==",
-    JSON.stringify((p as any).analysisFocus ?? [], null, 2),
+    JSON.stringify(p.analysisFocus ?? [], null, 2),
     "",
     "== Analysis rules (hard) ==",
-    ...(((p as any).analysisRules ?? []) as string[]).map((r) => `- ${r}`),
+    ...(((p.analysisRules as string[]) ?? []) as string[]).map((r) => `- ${r}`),
     "",
     "== Global guardrails ==",
     "- Do not give buy/sell/hold recommendations or price targets.",
     "- Stay strictly within the selected subtheme and company record.",
-    "- Cite what type of evidence would be needed; do not fabricate figures.",
-    "- Keep answers concise and structured (markdown, short sections).",
-    "",
-    b.userAnswer ? `== User's current draft answer ==\n${b.userAnswer}` : "",
-    b.action ? `== Requested assistant action ==\n${b.action}` : "",
-  ]
-    .filter(Boolean)
-    .join("\n");
+    "- Cite what type of evidence would be needed; never fabricate figures or dates.",
+    "- Keep responses concise and structured (markdown, short sections, bullets).",
+  ].join("\n");
+}
+
+function buildUserPrompt(b: Body): string {
+  const parts: string[] = [];
+  if (b.action) parts.push(`Assistant action requested: **${b.action}**`);
+  if (b.userAnswer?.trim()) {
+    parts.push(`My current draft answer:\n"""\n${b.userAnswer}\n"""`);
+  } else {
+    parts.push("I have not drafted an answer yet.");
+  }
+  if (b.userMessage?.trim()) parts.push(`Additional instruction: ${b.userMessage}`);
+  parts.push("Respond in markdown.");
+  return parts.join("\n\n");
 }
 
 export const Route = createFileRoute("/api/assist")({
@@ -52,16 +58,20 @@ export const Route = createFileRoute("/api/assist")({
         const body = (await request.json()) as Body;
         const key = process.env.LOVABLE_API_KEY;
         if (!key) return new Response("Missing LOVABLE_API_KEY", { status: 500 });
-        if (!Array.isArray(body.messages)) {
-          return new Response("messages required", { status: 400 });
-        }
+
         const gateway = createLovableAiGatewayProvider(key);
-        const result = streamText({
-          model: gateway("google/gemini-3-flash-preview"),
-          system: buildSystemPrompt(body),
-          messages: await convertToModelMessages(body.messages),
-        });
-        return result.toUIMessageStreamResponse({ originalMessages: body.messages });
+        try {
+          const result = await generateText({
+            model: gateway("google/gemini-3-flash-preview"),
+            system: buildSystemPrompt(body),
+            prompt: buildUserPrompt(body),
+          });
+          return Response.json({ text: result.text });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const status = /429/.test(msg) ? 429 : /402/.test(msg) ? 402 : 500;
+          return Response.json({ error: msg }, { status });
+        }
       },
     },
   },
