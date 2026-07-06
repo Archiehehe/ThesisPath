@@ -67,14 +67,9 @@ export type CompaniesFile = {
   companies: Company[];
 };
 
-export function packIdFor(c: Company): string {
-  // pack ids in the data are `${sector}__${theme}__${subtheme}` with lowercased,
-  // underscore-normalized tokens (letters/digits only).
-  const norm = (s: string) =>
-    s
-      .toLowerCase()
-      .replace(/&/g, " ")
-      .replace(/[^a-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "");
-  return `${norm(c.sector ?? "")}__${norm(c.theme ?? "")}__${norm(c.subtheme ?? "")}`;
+export function packIdFor(c: Company, index: PackIndex): string | undefined {
+  const match = index.packs.find(
+    (p) => p.sector === c.sector && p.theme === c.theme && p.subtheme === c.subtheme,
+  );
+  return match?.questionPackId;
 }
