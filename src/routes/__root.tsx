@@ -77,14 +77,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "ThesisPath — Structured equity research" },
+      {
+        name: "description",
+        content:
+          "A curated stock universe with subtheme-specific research question packs and bounded AI assistance per question.",
+      },
+      { name: "author", content: "ThesisPath" },
+      { property: "og:title", content: "ThesisPath — Structured equity research" },
+      {
+        property: "og:description",
+        content:
+          "Ticker → curated company record → subtheme question pack → bounded AI assist.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
