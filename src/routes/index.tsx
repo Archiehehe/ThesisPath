@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import type { CompaniesFile, PackIndex } from "@/lib/thesispath";
@@ -34,6 +34,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 function Home() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const companies = useQuery({
     queryKey: ["companies"],
@@ -71,18 +72,34 @@ function Home() {
             Structured equity research, one subtheme at a time
           </h1>
           <p className="mt-3 max-w-2xl text-sm text-muted-foreground">
-            Pick a ticker from the curated universe ({companies.data?.companies.length ?? "…"}{" "}
-            names, {index.data?.packs.length ?? "…"} question packs). Each company opens the exact
-            subtheme-specific question pack, and every question has its own bounded AI assistant.
+            Search any listed ticker (market cap over $2B). The curated universe of{" "}
+            {companies.data?.companies.length ?? "…"} names below opens instantly; anything
+            else is classified into one of {index.data?.packs.length ?? "…"} question packs by
+            Lovable AI on the fly.
           </p>
-          <div className="mt-6">
+          <form
+            className="mt-6 flex max-w-md gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const t = q.trim().toUpperCase();
+              if (t) navigate({ to: "/$ticker", params: { ticker: t } });
+            }}
+          >
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search ticker, company, subtheme…"
-              className="max-w-md"
+              placeholder="Search ticker (e.g. AAPL), company, subtheme…"
             />
-          </div>
+            <button
+              type="submit"
+              className="rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+            >
+              Open
+            </button>
+          </form>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Press Enter to research any ticker with Lovable AI.
+          </p>
         </div>
       </header>
 

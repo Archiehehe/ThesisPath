@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TickerRouteImport } from './routes/$ticker'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiResolveTickerRouteImport } from './routes/api/resolve-ticker'
 import { Route as ApiAssistRouteImport } from './routes/api/assist'
 
 const TickerRoute = TickerRouteImport.update({
@@ -23,6 +24,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResolveTickerRoute = ApiResolveTickerRouteImport.update({
+  id: '/api/resolve-ticker',
+  path: '/api/resolve-ticker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAssistRoute = ApiAssistRouteImport.update({
   id: '/api/assist',
   path: '/api/assist',
@@ -33,30 +39,34 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
+  '/api/resolve-ticker': typeof ApiResolveTickerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
+  '/api/resolve-ticker': typeof ApiResolveTickerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/$ticker': typeof TickerRoute
   '/api/assist': typeof ApiAssistRoute
+  '/api/resolve-ticker': typeof ApiResolveTickerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/$ticker' | '/api/assist'
+  fullPaths: '/' | '/$ticker' | '/api/assist' | '/api/resolve-ticker'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/$ticker' | '/api/assist'
-  id: '__root__' | '/' | '/$ticker' | '/api/assist'
+  to: '/' | '/$ticker' | '/api/assist' | '/api/resolve-ticker'
+  id: '__root__' | '/' | '/$ticker' | '/api/assist' | '/api/resolve-ticker'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TickerRoute: typeof TickerRoute
   ApiAssistRoute: typeof ApiAssistRoute
+  ApiResolveTickerRoute: typeof ApiResolveTickerRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -75,6 +85,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/resolve-ticker': {
+      id: '/api/resolve-ticker'
+      path: '/api/resolve-ticker'
+      fullPath: '/api/resolve-ticker'
+      preLoaderRoute: typeof ApiResolveTickerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/assist': {
       id: '/api/assist'
       path: '/api/assist'
@@ -89,17 +106,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TickerRoute: TickerRoute,
   ApiAssistRoute: ApiAssistRoute,
+  ApiResolveTickerRoute: ApiResolveTickerRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
