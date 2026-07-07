@@ -278,7 +278,21 @@ function QuestionCard({
           rows={4}
         />
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="default"
+            size="default"
+            disabled={loading !== null}
+            onClick={() => runAction("answer_with_evidence")}
+            className="gap-2 text-sm"
+          >
+            {loading === "answer_with_evidence" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Give the answers using evidence
+          </Button>
           {ACTIONS.map((a) => (
             <Button
               key={a.id}
@@ -296,6 +310,7 @@ function QuestionCard({
             </Button>
           ))}
         </div>
+
 
         {error && (
           <p className="rounded-md border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
