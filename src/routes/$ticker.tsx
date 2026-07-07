@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ChevronLeft, Loader2, Sparkles } from "lucide-react";
 import {
-  type CompaniesFile,
   type Company,
   type Pack,
   type PackIndex,
