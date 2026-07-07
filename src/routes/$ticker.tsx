@@ -56,9 +56,28 @@ function TickerPage() {
     staleTime: Infinity,
   });
 
-  const company = companies.data?.companies.find(
+  const curated = companies.data?.companies.find(
     (c) => c.ticker.toLowerCase() === ticker.toLowerCase(),
   );
+
+  const resolved = useQuery({
+    queryKey: ["resolve-ticker", ticker.toUpperCase()],
+    enabled: !!companies.data && !curated,
+    staleTime: Infinity,
+    retry: false,
+    queryFn: async () => {
+      const r = await fetch("/api/resolve-ticker", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ticker }),
+      });
+      const data = (await r.json()) as { company?: Company; error?: string };
+      if (!r.ok || !data.company) throw new Error(data.error ?? `HTTP ${r.status}`);
+      return data.company;
+    },
+  });
+
+  const company = curated ?? resolved.data;
   const packId = company && index.data ? packIdFor(company, index.data) : undefined;
 
   const pack = useQuery({
@@ -71,7 +90,27 @@ function TickerPage() {
   if (companies.isLoading || index.isLoading) {
     return <div className="p-10 text-sm text-muted-foreground">Loading…</div>;
   }
-  if (!company) throw notFound();
+  if (!curated && resolved.isLoading) {
+    return (
+      <div className="p-10 text-sm text-muted-foreground">
+        Resolving <span className="font-mono">{ticker.toUpperCase()}</span> with Lovable AI…
+      </div>
+    );
+  }
+  if (!company) {
+    const msg = resolved.error instanceof Error ? resolved.error.message : "Ticker not found.";
+    return (
+      <div className="mx-auto max-w-lg p-10 text-center text-sm">
+        <p className="text-muted-foreground">
+          Couldn't resolve <span className="font-mono">{ticker.toUpperCase()}</span>.
+        </p>
+        <p className="mt-2 text-destructive">{msg}</p>
+        <Link to="/" className="mt-4 inline-block underline">
+          Back to search
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
