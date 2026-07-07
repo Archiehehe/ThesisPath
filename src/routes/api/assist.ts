@@ -40,16 +40,26 @@ function buildSystemPrompt(b: Body): string {
 
 function buildUserPrompt(b: Body): string {
   const parts: string[] = [];
-  if (b.action) parts.push(`Assistant action requested: **${b.action}**`);
+  if (b.action === "answer_with_evidence") {
+    parts.push(
+      "Assistant action: **Give the answer using evidence**.",
+      "Draft a full analyst-grade answer to the question above for this specific company.",
+      "Structure the response as: (1) Direct answer in 2-3 sentences, (2) Key evidence — bullet list of the concrete data points, filings, disclosures, or public facts an analyst would cite (label each as 'Evidence needed:' when you cannot verify a specific number), (3) Assumptions and caveats, (4) What would change this view.",
+      "Do NOT fabricate figures, dates, or quotes. Where a specific number is required, describe the exact source to pull it from (e.g. '10-K Item 7 MD&A, segment revenue table').",
+    );
+  } else if (b.action) {
+    parts.push(`Assistant action requested: **${b.action}**`);
+  }
   if (b.userAnswer?.trim()) {
     parts.push(`My current draft answer:\n"""\n${b.userAnswer}\n"""`);
-  } else {
+  } else if (b.action !== "answer_with_evidence") {
     parts.push("I have not drafted an answer yet.");
   }
   if (b.userMessage?.trim()) parts.push(`Additional instruction: ${b.userMessage}`);
   parts.push("Respond in markdown.");
   return parts.join("\n\n");
 }
+
 
 export const Route = createFileRoute("/api/assist")({
   server: {
