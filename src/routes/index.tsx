@@ -34,6 +34,7 @@ async function fetchJson<T>(url: string): Promise<T> {
 }
 
 function Home() {
+  const navigate = useNavigate();
   const [q, setQ] = useState("");
   const companies = useQuery({
     queryKey: ["companies"],
