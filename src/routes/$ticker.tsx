@@ -38,30 +38,23 @@ export const Route = createFileRoute("/$ticker")({
 
 async function fetchJson<T>(url: string): Promise<T> {
   const r = await fetch(url);
-  if (!r.ok) throw new Error(`Failed to load ${url}`);
+  const ct = r.headers.get("content-type") ?? "";
+  if (!r.ok || !ct.includes("json")) {
+    throw new Error(`Failed to load ${url} (HTTP ${r.status})`);
+  }
   return r.json() as Promise<T>;
 }
 
 function TickerPage() {
   const { ticker } = Route.useParams();
-  const companies = useQuery({
-    queryKey: ["companies"],
-    queryFn: () => fetchJson<CompaniesFile>("/data/companies.json"),
-    staleTime: Infinity,
-  });
   const index = useQuery({
     queryKey: ["packs-index"],
     queryFn: () => fetchJson<PackIndex>("/data/packs-index.json"),
     staleTime: Infinity,
   });
 
-  const curated = companies.data?.companies.find(
-    (c) => c.ticker.toLowerCase() === ticker.toLowerCase(),
-  );
-
   const resolved = useQuery({
     queryKey: ["resolve-ticker", ticker.toUpperCase()],
-    enabled: !!companies.data && !curated,
     staleTime: Infinity,
     retry: false,
     queryFn: async () => {
@@ -70,13 +63,19 @@ function TickerPage() {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ ticker }),
       });
+      const ct = r.headers.get("content-type") ?? "";
+      if (!ct.includes("json")) {
+        throw new Error(
+          `Server returned ${r.status} ${r.statusText}. The AI resolver endpoint may not be deployed yet — try again in a moment.`,
+        );
+      }
       const data = (await r.json()) as { company?: Company; error?: string };
       if (!r.ok || !data.company) throw new Error(data.error ?? `HTTP ${r.status}`);
       return data.company;
     },
   });
 
-  const company = curated ?? resolved.data;
+  const company = resolved.data;
   const packId = company && index.data ? packIdFor(company, index.data) : undefined;
 
   const pack = useQuery({
@@ -86,10 +85,7 @@ function TickerPage() {
     staleTime: Infinity,
   });
 
-  if (companies.isLoading || index.isLoading) {
-    return <div className="p-10 text-sm text-muted-foreground">Loading…</div>;
-  }
-  if (!curated && resolved.isLoading) {
+  if (index.isLoading || resolved.isLoading) {
     return (
       <div className="p-10 text-sm text-muted-foreground">
         Resolving <span className="font-mono">{ticker.toUpperCase()}</span> with Lovable AI…
