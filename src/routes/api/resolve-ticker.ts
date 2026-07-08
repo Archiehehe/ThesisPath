@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import packsIndex from "../../../public/data/packs-index.json";
 
 type Body = { ticker: string };
 
@@ -26,6 +27,13 @@ type ResolvedCompany = {
   aiResolved?: true;
 };
 
+type PackIndexEntry = {
+  questionPackId: string;
+  sector: string;
+  theme: string;
+  subtheme: string;
+};
+
 function extractJson(text: string): unknown {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fence ? fence[1] : text;
@@ -46,11 +54,9 @@ export const Route = createFileRoute("/api/resolve-ticker")({
         const key = process.env.LOVABLE_API_KEY;
         if (!key) return Response.json({ error: "Missing LOVABLE_API_KEY" }, { status: 500 });
 
-        // Load pack index server-side to constrain the AI's subtheme choice.
-        const origin = new URL(request.url).origin;
-        const idx = (await (await fetch(`${origin}/data/packs-index.json`)).json()) as {
-          packs: { questionPackId: string; sector: string; theme: string; subtheme: string }[];
-        };
+        // Bundle the taxonomy instead of fetching it from the deployed origin; server-side
+        // self-fetches can fail before the AI call on preview deployments.
+        const idx = packsIndex as { packs: PackIndexEntry[] };
 
         const catalog = idx.packs
           .map((p) => `${p.sector} | ${p.theme} | ${p.subtheme}`)
