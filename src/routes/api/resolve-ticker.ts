@@ -116,22 +116,23 @@ export const Route = createFileRoute("/api/resolve-ticker")({
 
         const gateway = createLovableAiGatewayProvider(key);
         const system = [
-          "You classify publicly-listed equities into a fixed research taxonomy.",
-          "You must ONLY use one of the allowed sector|theme|subtheme triples below.",
-          "You must return valid JSON. No prose, no code fences.",
-          "Use the live quote facts when provided. If facts are incomplete but you know the listed company, still resolve and classify it.",
-          'Only return {"error": "<short reason>"} when the ticker is clearly not a real listed security.',
+          "You classify publicly-listed equities (and ETFs) for an equity research app.",
+          "You have a REFERENCE taxonomy of sector|theme|subtheme triples. Prefer an exact match from it when one accurately fits.",
+          "If NO triple in the reference taxonomy is a good fit (new IPO, spin-off, niche ticker, recent listing, non-US listing, ETF not in list, etc.), invent an accurate sector/theme/subtheme yourself using your own knowledge. Do not force a bad match.",
+          "Use the live quote facts as authoritative for ticker symbol, company/fund name, and exchange when provided. If facts are missing but you know the listed security, still resolve it from your own knowledge.",
+          "Be careful with ambiguous tickers: e.g. SpaceX is private and NOT publicly traded — do not confuse similarly-named tickers with private companies.",
+          'Only return {"error": "<short reason>"} when the ticker is clearly not a real listed security anywhere in the world.',
           "Do not reject companies for small market cap. Market cap is optional context only.",
-          "Never fabricate ticker symbols. Prefer the primary listing exchange when known.",
+          "Return valid JSON only. No prose, no code fences.",
         ].join("\n");
 
         const prompt = [
           `Ticker requested: ${requestedTicker}`,
           "",
-          "Live quote/context facts, if available:",
+          "Live quote/context facts, if available (authoritative for name/exchange when present):",
           quoteContext,
           "",
-          "Allowed taxonomy (pick the single closest match; copy the strings EXACTLY):",
+          "REFERENCE taxonomy (prefer an exact match; otherwise invent accurate free-form values):",
           catalog,
           "",
           "Return JSON with this shape (omit unknown optional fields):",
@@ -140,10 +141,10 @@ export const Route = createFileRoute("/api/resolve-ticker")({
   "companyName": "string",
   "exchange": "string",
   "country": "string",
-  "assetType": "Stock" | "ETF",
-  "sector": "one of allowed",
-  "theme": "one of allowed",
-  "subtheme": "one of allowed",
+  "assetType": "Stock" | "ETF" | "Fund" | "ADR",
+  "sector": "string (from taxonomy if matches, else your own accurate label)",
+  "theme": "string (from taxonomy if matches, else your own accurate label)",
+  "subtheme": "string (from taxonomy if matches, else your own accurate label)",
   "industryDescription": "1-2 sentence business description",
   "businessArchetype": "short label",
   "riskArchetype": "short label",
@@ -167,19 +168,13 @@ export const Route = createFileRoute("/api/resolve-ticker")({
           if (parsed.error) {
             return Response.json({ error: String(parsed.error) }, { status: 404 });
           }
-          // Validate taxonomy
-          const match = idx.packs.find(
-            (p) =>
-              p.sector === parsed.sector &&
-              p.theme === parsed.theme &&
-              p.subtheme === parsed.subtheme,
-          );
-          if (!match) {
+          if (!parsed.sector || !parsed.theme || !parsed.subtheme) {
             return Response.json(
-              { error: "AI returned a subtheme outside the allowed taxonomy." },
+              { error: "AI did not return a sector/theme/subtheme." },
               { status: 422 },
             );
           }
+
           const company: ResolvedCompany = {
             ...(parsed as ResolvedCompany),
             ticker: String(parsed.ticker ?? quoteFact?.symbol ?? requestedTicker).toUpperCase(),
