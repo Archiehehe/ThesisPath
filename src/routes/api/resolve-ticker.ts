@@ -34,6 +34,18 @@ type PackIndexEntry = {
   subtheme: string;
 };
 
+type QuoteFact = {
+  symbol?: string;
+  shortName?: string;
+  longName?: string;
+  exchange?: string;
+  fullExchangeName?: string;
+  quoteType?: string;
+  marketCap?: number;
+  currency?: string;
+  marketState?: string;
+};
+
 function extractJson(text: string): unknown {
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const raw = fence ? fence[1] : text;
@@ -41,6 +53,28 @@ function extractJson(text: string): unknown {
   const end = raw.lastIndexOf("}");
   if (start === -1 || end === -1) throw new Error("No JSON in model output");
   return JSON.parse(raw.slice(start, end + 1));
+}
+
+function toUsdBillions(value?: number) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? Math.round((value / 1_000_000_000) * 10) / 10
+    : undefined;
+}
+
+async function fetchQuoteFact(ticker: string): Promise<QuoteFact | null> {
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(ticker)}`;
+    const response = await fetch(url, {
+      headers: { accept: "application/json", "user-agent": "ThesisPath/1.0" },
+    });
+    if (!response.ok) return null;
+    const data = (await response.json()) as {
+      quoteResponse?: { result?: QuoteFact[] };
+    };
+    return data.quoteResponse?.result?.[0] ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const Route = createFileRoute("/api/resolve-ticker")({
@@ -58,6 +92,24 @@ export const Route = createFileRoute("/api/resolve-ticker")({
         // self-fetches can fail before the AI call on preview deployments.
         const idx = packsIndex as { packs: PackIndexEntry[] };
 
+        const requestedTicker = ticker.trim().toUpperCase();
+        const quoteFact = await fetchQuoteFact(requestedTicker);
+        const quoteContext = quoteFact
+          ? JSON.stringify(
+              {
+                ticker: quoteFact.symbol,
+                name: quoteFact.longName ?? quoteFact.shortName,
+                exchange: quoteFact.fullExchangeName ?? quoteFact.exchange,
+                quoteType: quoteFact.quoteType,
+                currency: quoteFact.currency,
+                marketCapUsdB: toUsdBillions(quoteFact.marketCap),
+                marketState: quoteFact.marketState,
+              },
+              null,
+              2,
+            )
+          : "No live quote facts were available. Resolve from your company/ticker knowledge.";
+
         const catalog = idx.packs
           .map((p) => `${p.sector} | ${p.theme} | ${p.subtheme}`)
           .join("\n");
@@ -67,13 +119,17 @@ export const Route = createFileRoute("/api/resolve-ticker")({
           "You classify publicly-listed equities into a fixed research taxonomy.",
           "You must ONLY use one of the allowed sector|theme|subtheme triples below.",
           "You must return valid JSON. No prose, no code fences.",
-          "If the ticker is not a real listed security, or market cap is under 2 billion USD,",
-          'return {"error": "<short reason>"} instead of a company object.',
-          "Never fabricate ticker symbols. Use the primary listing exchange.",
+          "Use the live quote facts when provided. If facts are incomplete but you know the listed company, still resolve and classify it.",
+          'Only return {"error": "<short reason>"} when the ticker is clearly not a real listed security.',
+          "Do not reject companies for small market cap. Market cap is optional context only.",
+          "Never fabricate ticker symbols. Prefer the primary listing exchange when known.",
         ].join("\n");
 
         const prompt = [
-          `Ticker: ${ticker.trim().toUpperCase()}`,
+          `Ticker requested: ${requestedTicker}`,
+          "",
+          "Live quote/context facts, if available:",
+          quoteContext,
           "",
           "Allowed taxonomy (pick the single closest match; copy the strings EXACTLY):",
           catalog,
@@ -97,7 +153,7 @@ export const Route = createFileRoute("/api/resolve-ticker")({
   "importantMetrics": ["..."],
   "stockDrivers": ["..."],
   "redFlags": ["..."],
-  "marketCapUsdB": number (approximate, in USD billions)
+  "marketCapUsdB": number (approximate, in USD billions, if known)
 }`,
         ].join("\n");
 
@@ -124,16 +180,20 @@ export const Route = createFileRoute("/api/resolve-ticker")({
               { status: 422 },
             );
           }
-          const mc = Number(parsed.marketCapUsdB ?? 0);
-          if (mc && mc < 2) {
-            return Response.json(
-              { error: `Market cap ~$${mc}B is below the $2B threshold.` },
-              { status: 404 },
-            );
-          }
           const company: ResolvedCompany = {
             ...(parsed as ResolvedCompany),
-            ticker: String(parsed.ticker ?? ticker).toUpperCase(),
+            ticker: String(parsed.ticker ?? quoteFact?.symbol ?? requestedTicker).toUpperCase(),
+            companyName: String(
+              parsed.companyName ?? quoteFact?.longName ?? quoteFact?.shortName ?? requestedTicker,
+            ),
+            exchange: String(
+              parsed.exchange ?? quoteFact?.fullExchangeName ?? quoteFact?.exchange ?? "Unknown",
+            ),
+            assetType: String(parsed.assetType ?? quoteFact?.quoteType ?? "Stock"),
+            marketCapUsdB:
+              typeof parsed.marketCapUsdB === "number"
+                ? parsed.marketCapUsdB
+                : toUsdBillions(quoteFact?.marketCap),
             aiResolved: true,
           };
           return Response.json({ company });

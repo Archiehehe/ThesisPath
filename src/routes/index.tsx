@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       {
         name: "description",
         content:
-          "Type any listed ticker (market cap over $2B). Lovable AI classifies the company into a subtheme-specific research question pack and helps you answer each question with evidence.",
+          "Type any listed ticker. Lovable AI resolves the company, classifies it into a subtheme-specific research question pack, and helps you answer each question with evidence.",
       },
       { property: "og:title", content: "ThesisPath — Structured equity research" },
       {
@@ -54,9 +54,9 @@ function Home() {
           <span className="text-muted-foreground">one subtheme at a time.</span>
         </h1>
         <p className="mt-5 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Type a ticker for any listed company with a market cap over $2B. Lovable AI
-          identifies the company, classifies it into the right subtheme, loads a bespoke
-          research question pack, and helps you answer each question with cited evidence.
+          Type a ticker for any listed company. Lovable AI identifies the company,
+          classifies it into the right subtheme, loads a bespoke research question pack,
+          and helps you answer each question with cited evidence.
         </p>
 
         <form onSubmit={submit} className="mt-8 flex gap-2">
