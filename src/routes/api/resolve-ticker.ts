@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
-import packsIndex from "../../../public/data/packs-index.json";
+import packsIndex from "@/lib/packs-index.json";
 
 type Body = { ticker: string };
 
